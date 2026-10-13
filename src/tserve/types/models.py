@@ -30,7 +30,7 @@ from typing import Any, Literal, Self
 import narwhals as nw
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from tserve.types._checks import _check_frame, _require_columns
+from tserve.types._checks import _check_frame, _check_quantiles, _require_columns
 from tserve.types._examples import (
     HEALTH_OK,
     MODELS_RESULT,
@@ -100,22 +100,25 @@ class PredictRequest(BaseModel):
 
     @model_validator(mode="after")
     def _check_frames(self) -> Self:
-        """Reject frames that are not a supported table shape.
+        """Reject frames that are not a supported table shape or invalid quantiles.
 
         Returns
         -------
         PredictRequest
             ``self`` after ``past``, ``future``, and ``static`` pass
-            ``_check_frame``.
+            ``_check_frame``, and ``quantiles`` passes ``_check_quantiles``.
 
         Raises
         ------
         ValueError
-            If a provided frame is not ``None`` and not a supported shape.
+            If a provided frame is not ``None`` and not a supported shape,
+            or if ``quantiles`` is empty, contains values outside (0, 1),
+            or contains duplicates.
         """
         _check_frame(self.past, name="past")
         _check_frame(self.future, name="future")
         _check_frame(self.static, name="static")
+        _check_quantiles(self.quantiles)
         return self
 
 
@@ -234,23 +237,26 @@ class CoercedPredictRequest(BaseModel):
 
     @model_validator(mode="after")
     def _check_frame_columns(self) -> Self:
-        """Require time and target columns.
+        """Require time and target columns and valid quantiles.
 
         Returns
         -------
         CoercedPredictRequest
-            ``self`` after column checks.
+            ``self`` after column and quantile checks.
 
         Raises
         ------
         ValueError
             If ``past`` (or ``future`` when present) is missing
-            required columns.
+            required columns, or if ``quantiles`` is empty, contains
+            values outside (0, 1), or contains duplicates.
         """
         _require_columns(self.past, [self.time, *self.target], frame_name="past")
 
         if self.future is not None:
             _require_columns(self.future, [self.time], frame_name="future")
+
+        _check_quantiles(self.quantiles)
 
         return self
 
