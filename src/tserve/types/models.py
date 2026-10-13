@@ -100,24 +100,39 @@ class PredictRequest(BaseModel):
 
     @model_validator(mode="after")
     def _check_frames(self) -> Self:
-        """Reject frames that are not a supported table shape or invalid quantiles.
+        """Reject frames that are not a supported table shape.
 
         Returns
         -------
         PredictRequest
             ``self`` after ``past``, ``future``, and ``static`` pass
-            ``_check_frame``, and ``quantiles`` passes ``_check_quantiles``.
+            ``_check_frame``.
 
         Raises
         ------
         ValueError
-            If a provided frame is not ``None`` and not a supported shape,
-            or if ``quantiles`` is empty, contains values outside (0, 1),
-            or contains duplicates.
+            If a provided frame is not ``None`` and not a supported shape.
         """
         _check_frame(self.past, name="past")
         _check_frame(self.future, name="future")
         _check_frame(self.static, name="static")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_quantiles(self) -> Self:
+        """Reject quantiles that are invalid.
+
+        Returns
+        -------
+        PredictRequest
+            ``self`` after ``quantiles`` passes ``_check_quantiles``.
+
+        Raises
+        ------
+        ValueError
+            If ``quantiles`` is empty, contains values outside (0, 1),
+            or contains duplicates.
+        """
         _check_quantiles(self.quantiles)
         return self
 
@@ -237,26 +252,23 @@ class CoercedPredictRequest(BaseModel):
 
     @model_validator(mode="after")
     def _check_frame_columns(self) -> Self:
-        """Require time and target columns and valid quantiles.
+        """Require time and target columns.
 
         Returns
         -------
         CoercedPredictRequest
-            ``self`` after column and quantile checks.
+            ``self`` after column checks.
 
         Raises
         ------
         ValueError
             If ``past`` (or ``future`` when present) is missing
-            required columns, or if ``quantiles`` is empty, contains
-            values outside (0, 1), or contains duplicates.
+            required columns.
         """
         _require_columns(self.past, [self.time, *self.target], frame_name="past")
 
         if self.future is not None:
             _require_columns(self.future, [self.time], frame_name="future")
-
-        _check_quantiles(self.quantiles)
 
         return self
 

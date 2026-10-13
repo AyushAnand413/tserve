@@ -238,21 +238,6 @@ def test_predict_response_rejects(kwargs, match):
             "List should have at least 1 item",
             id="target_empty",
         ),
-        pytest.param(
-            {"quantiles": [-0.5]},
-            r"quantiles must be in the open interval \(0, 1\), got -0.5",
-            id="coerced_quantiles_negative",
-        ),
-        pytest.param(
-            {"quantiles": []},
-            "quantiles cannot be empty",
-            id="coerced_quantiles_empty",
-        ),
-        pytest.param(
-            {"quantiles": [0.5, 0.5]},
-            "quantiles must be unique, but found duplicates",
-            id="coerced_quantiles_duplicate",
-        ),
     ],
 )
 def test_coerced_request_rejects(kwargs, match):
